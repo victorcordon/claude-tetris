@@ -15,6 +15,18 @@ const COLORS = [
   '#ffb74d', // L - orange
 ];
 
+// Mismo orden que COLORS; tonos más saturados para fondo claro
+const COLORS_LIGHT = [
+  null,
+  '#00acc1', // I
+  '#f9a825', // O
+  '#8e24aa', // T
+  '#43a047', // S
+  '#e53935', // Z
+  '#1e88e5', // J
+  '#fb8c00', // L
+];
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -39,6 +51,11 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
+
+const THEME_KEY = 'tetris-theme';
+let theme = 'dark';
+let gridColor, highlightColor;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -158,18 +175,18 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const color = (theme === 'light' ? COLORS_LIGHT : COLORS)[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillStyle = highlightColor;
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -300,5 +317,27 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === 'light' ? 'Modo oscuro' : 'Modo claro';
+  const styles = getComputedStyle(document.documentElement);
+  gridColor = styles.getPropertyValue('--grid').trim();
+  highlightColor = styles.getPropertyValue('--highlight').trim();
+}
+
+themeBtn.addEventListener('click', () => {
+  applyTheme(theme === 'light' ? 'dark' : 'light');
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  themeBtn.blur(); // evita que Space/Enter vuelvan a activar el botón
+  // En pausa o game over el bucle está detenido: refrescar manualmente
+  draw();
+  drawNext();
+});
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
 init();
